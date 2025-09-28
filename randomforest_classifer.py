@@ -1,0 +1,106 @@
+# random forest + smote + threshold at .28
+import kagglehub
+import random
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    classification_report,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    roc_curve,
+    precision_recall_curve,
+    auc as auc_pr
+)
+from imblearn.over_sampling import SMOTE  # Import SMOTE
+
+# Load dataset
+path = kagglehub.dataset_download("pavansubhasht/ibm-hr-analytics-attrition-dataset")
+file_path = f"{path}/WA_Fn-UseC_-HR-Employee-Attrition.csv"
+df = pd.read_csv(file_path)
+
+# Encode categorical variables
+for col in df.columns:
+    if df[col].dtype == 'object':
+        df[col] = df[col].astype('category').cat.codes
+
+# Define features and target
+X = df.drop('Attrition', axis=1)
+y = df['Attrition']
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Standardize features (for consistency with base code)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Apply SMOTE to balance the training data
+smote = SMOTE(random_state=42)
+X_train_smote, y_train_smote = smote.fit_resample(X_train_scaled, y_train)
+
+# Train Random Forest
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train_smote, y_train_smote)
+
+# Predictions with custom threshold
+threshold = 0.28  # Modify this value to change the threshold
+y_pred_prob = model.predict_proba(X_test_scaled)[:, 1]
+y_pred = (y_pred_prob >= threshold).astype(int)
+
+# Evaluation Metrics
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, zero_division=0)
+recall = recall_score(y_test, y_pred, zero_division=0)
+f1 = f1_score(y_test, y_pred, zero_division=0)
+auc_roc = roc_auc_score(y_test, y_pred_prob)
+
+print(f"=== Random Forest Evaluation {threshold:.2f} ===")
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1 Score: {f1:.4f}")
+print(f"AUC Score: {auc_roc:.4f}")
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred, zero_division=0))
+
+# Plot ROC Curve
+fpr, tpr, thresholds_roc = roc_curve(y_test, y_pred_prob)
+plt.figure(figsize=(10, 6))
+plt.plot(fpr, tpr, label=f'Random Forest (AUC = {auc_roc:.2f})')
+plt.plot([0, 1], [0, 1], 'k--', label='Random Chance')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend()
+plt.grid()
+
+# Calculate Precision-Recall Curve and AUC
+precision_pr, recall_pr, thresholds_pr = precision_recall_curve(y_test, y_pred_prob)
+auc_pr_score = auc_pr(recall_pr, precision_pr)
+print(f"\nPrecision-Recall AUC Score: {auc_pr_score:.4f}")
+
+# Plot Precision-Recall Curve
+plt.figure(figsize=(10, 6))
+plt.plot(recall_pr, precision_pr, label=f'Random Forest (PR AUC = {auc_pr_score:.2f})')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.title('Precision-Recall Curve')
+plt.legend()
+plt.grid()
+plt.show()
+
+# Random sample prediction
+sample_index = random.randint(0, len(X_test_scaled) - 1)
+sample = X_test_scaled[[sample_index]]
+sample_prediction = model.predict(sample)[0]
+print(f"\nSample Person Prediction (0 = Stay, 1 = Leave): {sample_prediction}")
