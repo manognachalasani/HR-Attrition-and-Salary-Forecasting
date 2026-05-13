@@ -36,7 +36,7 @@ This is available on Kaggle.
 ---
 ### 📑 Project Report
 A detailed report of the methodology, experiments, and results is available here:  
-   [View Report (PDF)]([report/HR_Attrition_Report.pdf](https://github.com/manognachalasani/HR-Attrition-and-Salary-Forecasting/blob/main/report.pdf))
+   [View Report (PDF)](report/HR_Attrition_Report.pdf](https://github.com/manognachalasani/HR-Attrition-and-Salary-Forecasting/blob/main/report.pdf)
 
 The report includes:  
 - Data exploration and preprocessing steps  
